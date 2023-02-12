@@ -1,45 +1,58 @@
 #!/usr/bin/python3
-"""BaseModel module"""
-import uuid
+
+"""
+    Defines a class BaseModel.
+"""
+
 from datetime import datetime
-from models import storage
+from uuid import uuid4
+import models
 
 
-class BaseModel():
-    """BaseModel class defines common attr/mtds for other classes"""
+class BaseModel:
+    """Represent a BaseModel."""
 
     def __init__(self, *args, **kwargs):
-        """Constructor  - initializes BaseModel instance"""
-        if kwargs and kwargs is not None:
-            for k in kwargs:
-                if k == "created_at":
-                    self.__dict__["created_at"] = datetime.\
-                        strptime(kwargs["created_at"], '%Y-%m-%dT%H:%M:%S.%f')
-                elif k == "updated_at":
-                    self.__dict__["updated_at"] = datetime.\
-                        strptime(kwargs["updated_at"], '%Y-%m-%dT%H:%M:%S.%f')
-                else:
-                    self.__dict__[k] = kwargs[k]
-        else:
-            self.id = str(uuid.uuid4())
+        """Initialize a new BaseModel"""
+
+        if not kwargs:
+            self.id = str(uuid4())
             self.created_at = datetime.now()
             self.updated_at = datetime.now()
-            storage.new(self)
+            models.storage.new(self)
+        else:
+            for key, val in kwargs.items():
+                if key != '__class__':
+                    if key == "created_at" or key == "updated_at":
+                        setattr(self, key, datetime.strptime(
+                            val, '%Y-%m-%dT%H:%M:%S.%f'))
+                    else:
+                        setattr(self, key, val)
 
     def __str__(self):
-        """Prints a string representation of class"""
-        return "[{}] ({}) {}".format(type(self).__name__, self.id,
-                                     self.__dict__)
+        """Return a string representation of the class"""
+
+        return "[{:s}] ({:s}) {:s}".format(
+            self.__class__.__name__,
+            self.id,
+            str(self.__dict__)
+        )
 
     def save(self):
-        """Updates updated_at with current datetime"""
+        """Update the date field"""
+
         self.updated_at = datetime.now()
-        storage.save()
+        models.storage.save()
 
     def to_dict(self):
-        """Returns a dict of all keys/vals of __dict__"""
-        dict = self.__dict__.copy()
-        dict["__class__"] = type(self).__name__
-        dict["created_at"] = self.created_at.isoformat()
-        dict["updated_at"] = self.updated_at.isoformat()
-        return dict
+        """Return a dictionary representation of the instance"""
+
+        rep = {
+            "__class__": self.__class__.__name__,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat()
+        }
+
+        dict_copy = self.__dict__.copy()
+        dict_copy.update(rep)
+        return dict_copy
